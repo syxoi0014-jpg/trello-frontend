@@ -61,7 +61,7 @@
         let draggedTaskId = null;
 
         function loadTasks() {
-            fetch('http://localhost:8080/api/tasks')
+            fetch('https://trello-enterprise-api.onrender.com')
                 .then(response => response.json())
                 .then(tasks => {
                     document.getElementById('TODO').innerHTML = '<h2>TODO (Нужно сделать)</h2>';
@@ -94,7 +94,7 @@
 
             const newTask = { title: titleInput, description: descInput, status: "TODO" };
 
-            fetch('http://localhost:8080/api/tasks', {
+            fetch('https://trello-enterprise-api.onrender.com', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newTask)
@@ -125,7 +125,7 @@
             const cardElement = document.getElementById(`task-${draggedTaskId}`);
             document.getElementById(newStatus).appendChild(cardElement);
 
-            fetch(`http://localhost:8080/api/tasks/${draggedTaskId}`, {
+            fetch(`https://trello-enterprise-api.onrender.com}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(taskToUpdate)
@@ -143,7 +143,7 @@
             }
 
             // Отправляем DELETE запрос на сервер
-            fetch(`http://localhost:8080/api/tasks/${id}`, {
+            fetch(`https://trello-enterprise-api.onrender.com}`, {
                 method: 'DELETE',
             })
             .then(response => {
