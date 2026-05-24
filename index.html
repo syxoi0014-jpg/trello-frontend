@@ -125,7 +125,7 @@
             const cardElement = document.getElementById(`task-${draggedTaskId}`);
             document.getElementById(newStatus).appendChild(cardElement);
 
-            fetch(`https://trello-enterprise-api.onrender.com/api/tasks}`, {
+            fetch(`https://trello-enterprise-api.onrender.com/api/tasks/${taskId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(taskToUpdate)
