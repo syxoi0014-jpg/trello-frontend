@@ -61,7 +61,7 @@
         let draggedTaskId = null;
 
         function loadTasks() {
-            fetch('https://trello-enterprise-api.onrender.com')
+            fetch('https://trello-enterprise-api.onrender.com/api/tasks')
                 .then(response => response.json())
                 .then(tasks => {
                     document.getElementById('TODO').innerHTML = '<h2>TODO (Нужно сделать)</h2>';
