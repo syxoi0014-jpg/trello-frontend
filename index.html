@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мой Trello</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f5f7; padding: 20px; }
+        .form-container { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 300px; }
+        .form-container input { width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .form-container button { background: #5aac44; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .form-container button:hover { background: #519839; }
+
+        .board { display: flex; gap: 20px; }
+        .column { background: #ebecf0; border-radius: 8px; width: 300px; padding: 10px; min-height: 400px; }
+        .column h2 { font-size: 16px; color: #172b4d; margin-bottom: 15px; font-weight: bold; }
+        
+        /* Стили карточки (добавили position: relative для позиционирования крестика) */
+        .card { background: white; border-radius: 3px; padding: 10px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border-left: 4px solid #0079bf; cursor: grab; position: relative; }
+        .card:active { cursor: grabbing; }
+        .card h3 { margin: 0 0 5px 0; font-size: 14px; color: #172b4d; max-width: 90%; } /* Сузили заголовок, чтобы не налезал на крестик */
+        .card p { margin: 0; font-size: 12px; color: #5e6c84; }
+
+        /* --- НОВОЕ: Стили для крестика удаления --- */
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            color: #ccc; /* Светлый по умолчанию */
+            font-size: 18px;
+            font-weight: bold;
+            transition: color 0.2s; /* Плавное изменение цвета */
+        }
+        /* При наведении крестик становится красным */
+        .delete-btn:hover { color: #f44336; }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h3>Новая задача</h3>
+        <input type="text" id="taskTitle" placeholder="Название (например: Баг с физикой)">
+        <input type="text" id="taskDesc" placeholder="Описание">
+        <button onclick="createTask()">Создать</button>
+    </div>
+
+    <div class="board">
+        <div class="column" id="TODO" ondragover="allowDrop(event)" ondrop="drop(event, 'TODO')">
+            <h2>TODO (Нужно сделать)</h2>
+        </div>
+        <div class="column" id="IN_PROGRESS" ondragover="allowDrop(event)" ondrop="drop(event, 'IN_PROGRESS')">
+            <h2>IN PROGRESS (В процессе)</h2>
+        </div>
+        <div class="column" id="DONE" ondragover="allowDrop(event)" ondrop="drop(event, 'DONE')">
+            <h2>DONE (Готово)</h2>
+        </div>
+    </div>
+
+    <script>
+        let tasksData = {};
+        let draggedTaskId = null;
+
+        function loadTasks() {
+            fetch('http://localhost:8080/api/tasks')
+                .then(response => response.json())
+                .then(tasks => {
+                    document.getElementById('TODO').innerHTML = '<h2>TODO (Нужно сделать)</h2>';
+                    document.getElementById('IN_PROGRESS').innerHTML = '<h2>IN PROGRESS (В процессе)</h2>';
+                    document.getElementById('DONE').innerHTML = '<h2>DONE (Готово)</h2>';
+
+                    tasks.forEach(task => {
+                        tasksData[task.id] = task;
+
+                        // --- НОВОЕ: Добавляем кнопку удаленияinside the card ---
+                        const cardHtml = `
+                            <div class="card" draggable="true" id="task-${task.id}" ondragstart="drag(event, ${task.id})">
+                                <span class="delete-btn" onclick="deleteTask(${task.id})">&times;</span>
+                                <h3>${task.title}</h3>
+                                <p>${task.description}</p>
+                            </div>
+                        `;
+                        const column = document.getElementById(task.status);
+                        if (column) column.innerHTML += cardHtml;
+                    });
+                })
+                .catch(error => console.error('Ошибка:', error));
+        }
+
+        function createTask() {
+            const titleInput = document.getElementById('taskTitle').value;
+            const descInput = document.getElementById('taskDesc').value;
+
+            if (!titleInput) return alert("Введите название задачи!");
+
+            const newTask = { title: titleInput, description: descInput, status: "TODO" };
+
+            fetch('http://localhost:8080/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTask)
+            })
+            .then(() => {
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskDesc').value = '';
+                loadTasks();
+            });
+        }
+
+        // ==========================================
+        // МАГИЯ DRAG & DROP
+        // ==========================================
+
+        function allowDrop(event) { event.preventDefault(); }
+        function drag(event, id) { draggedTaskId = id; }
+
+        function drop(event, newStatus) {
+            event.preventDefault();
+            if (!draggedTaskId) return;
+
+            const taskToUpdate = tasksData[draggedTaskId];
+            if (taskToUpdate.status === newStatus) return; 
+            
+            taskToUpdate.status = newStatus;
+
+            const cardElement = document.getElementById(`task-${draggedTaskId}`);
+            document.getElementById(newStatus).appendChild(cardElement);
+
+            fetch(`http://localhost:8080/api/tasks/${draggedTaskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(taskToUpdate)
+            })
+            .catch(error => console.error("Ошибка сохранения:", error));
+        }
+
+        // ==========================================
+        // --- НОВОЕ: Функция удаления задачи ---
+        // ==========================================
+        function deleteTask(id) {
+            // Показываем подтверждение, чтобы случайно не удалить
+            if (!confirm("Уверены, что хотите удалить эту задачу?")) {
+                return; // Если пользователь передумал, выходим
+            }
+
+            // Отправляем DELETE запрос на сервер
+            fetch(`http://localhost:8080/api/tasks/${id}`, {
+                method: 'DELETE',
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Если удаление прошло успешно, перезагружаем список задач
+                    loadTasks(); 
+                }
+            })
+            .catch(error => console.error("Ошибка удаления:", error));
+        }
+
+        // Загружаем задачи при старте
+        loadTasks();
+    </script>
+</body>
+</html>
