@@ -125,8 +125,7 @@
             const cardElement = document.getElementById(`task-${draggedTaskId}`);
             document.getElementById(newStatus).appendChild(cardElement);
 
-            fetch(`https://trello-enterprise-api.onrender.com/api/tasks/${taskId}`, {
-                method: 'PUT',
+            fetch(`https://trello-enterprise-api.onrender.com/api/tasks/${draggedTaskId}`, {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(taskToUpdate)
             })
@@ -143,9 +142,9 @@
             }
 
             // Отправляем DELETE запрос на сервер
-            fetch(`https://trello-enterprise-api.onrender.com}`, {
-                method: 'DELETE',
-            })
+          fetch(`https://trello-enterprise-api.onrender.com/api/tasks/${id}`, {
+    method: 'DELETE',
+})
             .then(response => {
                 if (response.ok) {
                     // Если удаление прошло успешно, перезагружаем список задач
